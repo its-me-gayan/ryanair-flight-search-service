@@ -4,7 +4,11 @@ target/
 !**/src/test/**/target/
 
 ### IntelliJ IDEA ###
-.idea
+.idea/encodings.xml
+.idea/misc.xml
+.idea/uiDesigner.xml
+.idea/vcs.xml
+.idea/workspace.xml
 .idea/sonarlint
 .idea/sonarlint/**
 .idea/modules.xml
