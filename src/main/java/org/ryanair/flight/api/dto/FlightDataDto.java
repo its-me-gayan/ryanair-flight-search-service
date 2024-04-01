@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class SelectedFlightDataDto {
+public class FlightDataDto {
     private String departure;
     private String arrival;
     private List<Flight> selectedFlights;

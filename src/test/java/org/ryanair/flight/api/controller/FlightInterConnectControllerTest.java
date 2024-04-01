@@ -3,7 +3,7 @@ package org.ryanair.flight.api.controller;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.ryanair.flight.api.client.impl.RyanairAPIClient;
-import org.ryanair.flight.api.service.backend.impl.BackendAPIServiceImpl;
+import org.ryanair.flight.api.service.backend.impl.RyanairBackendAPIServiceImpl;
 import org.ryanair.flight.api.service.frontend.impl.FlightSearchServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,7 +30,7 @@ class FlightInterConnectControllerTest {
     private FlightSearchServiceImpl flightInterConnectService;
 
     @MockBean
-    private BackendAPIServiceImpl backendAPIService;
+    private RyanairBackendAPIServiceImpl backendAPIService;
 
     @MockBean
     private RyanairAPIClient ryanairAPIClient;

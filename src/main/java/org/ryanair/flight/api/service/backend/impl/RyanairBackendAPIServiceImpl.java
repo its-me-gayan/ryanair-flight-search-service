@@ -23,7 +23,7 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
-public class BackendAPIServiceImpl implements BackendAPIService {
+public class RyanairBackendAPIServiceImpl implements BackendAPIService {
 
     private final APIClient apiClient;
 

@@ -18,6 +18,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AvailableFlightDto {
-    private List<SelectedFlightDataDto> directFlights;
+    private List<FlightDataDto> directFlights;
     private List<InterConnectedFlightData> interconnectedFlights;
 }

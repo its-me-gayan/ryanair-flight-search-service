@@ -2,7 +2,7 @@ package org.ryanair.flight.api.helper.impl;
 
 import org.ryanair.flight.api.dto.InterConnectedFlightData;
 import org.ryanair.flight.api.dto.RequestDataDto;
-import org.ryanair.flight.api.dto.SelectedFlightDataDto;
+import org.ryanair.flight.api.dto.FlightDataDto;
 import org.ryanair.flight.api.dto.YearMonthDataDto;
 import org.ryanair.flight.api.helper.ServiceHelper;
 import org.ryanair.flight.api.model.Flight;
@@ -39,11 +39,10 @@ public class ServiceHelperImpl implements ServiceHelper {
             LocalDateTime plus2LocalDateTime = dateTime.plusHours(2);
             long diff = departLocalDateTime.until(plus2LocalDateTime, java.time.temporal.ChronoUnit.SECONDS);
 
-            if (diff <= 0) {
-                if (diff > minDifference) {
+            if (diff <= 0 && (diff > minDifference)) {
                     minDifference = diff;
                     index = i;
-                }
+
             }
         }
         if (index == -1) {
@@ -88,32 +87,32 @@ public class ServiceHelperImpl implements ServiceHelper {
     public void linearizingDepartingAndArrivingInterconnectedFlights(HashMap<String, List<Flight>> departFlightDataMap, HashMap<String, List<Flight>> arriveFlightDataMap, List<InterConnectedFlightData> interConnectedFlightData) {
 
         for (InterConnectedFlightData connectedFlightData : interConnectedFlightData) {
-            List<SelectedFlightDataDto> arriveFlightData = connectedFlightData.getArriveFlightData();
-            List<SelectedFlightDataDto> departureFlightData = connectedFlightData.getDepartureFlightData();
+            List<FlightDataDto> arriveFlightData = connectedFlightData.getArriveFlightData();
+            List<FlightDataDto> departureFlightData = connectedFlightData.getDepartureFlightData();
 
-            for (SelectedFlightDataDto selectedFlightDataDto : arriveFlightData) {
-                String arrival = selectedFlightDataDto.getArrival();
-                String departure = selectedFlightDataDto.getDeparture();
+            for (FlightDataDto flightDataDto : arriveFlightData) {
+                String arrival = flightDataDto.getArrival();
+                String departure = flightDataDto.getDeparture();
 
                 String key = departure + "-" + arrival;
                 if (Objects.isNull(arriveFlightDataMap.get(key))) {
-                    arriveFlightDataMap.put(key, selectedFlightDataDto.getSelectedFlights());
+                    arriveFlightDataMap.put(key, flightDataDto.getSelectedFlights());
                 } else {
-                    arriveFlightDataMap.get(key).addAll(selectedFlightDataDto.getSelectedFlights());
+                    arriveFlightDataMap.get(key).addAll(flightDataDto.getSelectedFlights());
                 }
 
             }
 
-            for (SelectedFlightDataDto selectedFlightDataDto : departureFlightData) {
-                String arrival = selectedFlightDataDto.getArrival();
-                String departure = selectedFlightDataDto.getDeparture();
+            for (FlightDataDto flightDataDto : departureFlightData) {
+                String arrival = flightDataDto.getArrival();
+                String departure = flightDataDto.getDeparture();
 
                 String key = departure + "-" + arrival;
 
                 if (Objects.isNull(departFlightDataMap.get(key))) {
-                    departFlightDataMap.put(key, selectedFlightDataDto.getSelectedFlights());
+                    departFlightDataMap.put(key, flightDataDto.getSelectedFlights());
                 } else {
-                    departFlightDataMap.get(key).addAll(selectedFlightDataDto.getSelectedFlights());
+                    departFlightDataMap.get(key).addAll(flightDataDto.getSelectedFlights());
                 }
 
             }
@@ -121,9 +120,9 @@ public class ServiceHelperImpl implements ServiceHelper {
     }
 
     @Override
-    public void linearizingDepartingAndArrivingDirectFlights(HashMap<String, List<Flight>> linearDirectFlightMap, List<SelectedFlightDataDto> directFlightList) {
+    public void linearizingDepartingAndArrivingDirectFlights(HashMap<String, List<Flight>> linearDirectFlightMap, List<FlightDataDto> directFlightList) {
 
-        for (SelectedFlightDataDto directFlightData : directFlightList) {
+        for (FlightDataDto directFlightData : directFlightList) {
             String arrival = directFlightData.getArrival();
             String departure = directFlightData.getDeparture();
             String key = departure + "-" + arrival;

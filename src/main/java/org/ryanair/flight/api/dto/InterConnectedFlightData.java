@@ -18,6 +18,6 @@ import java.util.List;
 @Builder
 @Data
 public class InterConnectedFlightData {
-    private List<SelectedFlightDataDto> departureFlightData;
-    private List<SelectedFlightDataDto> arriveFlightData;
+    private List<FlightDataDto> departureFlightData;
+    private List<FlightDataDto> arriveFlightData;
 }

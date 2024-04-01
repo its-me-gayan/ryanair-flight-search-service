@@ -2,8 +2,8 @@ package org.ryanair.flight.api.dto;
 
 import lombok.*;
 
+import java.io.Serial;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * Author: Gayan Sanjeewa
@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Data
 public class AbstractResponse implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 2405172041950251807L;
     private String timeStamp;
     private int responseCode;
     private String message;

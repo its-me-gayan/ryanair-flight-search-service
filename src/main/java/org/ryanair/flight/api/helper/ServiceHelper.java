@@ -2,7 +2,7 @@ package org.ryanair.flight.api.helper;
 
 import org.ryanair.flight.api.dto.InterConnectedFlightData;
 import org.ryanair.flight.api.dto.RequestDataDto;
-import org.ryanair.flight.api.dto.SelectedFlightDataDto;
+import org.ryanair.flight.api.dto.FlightDataDto;
 import org.ryanair.flight.api.dto.YearMonthDataDto;
 import org.ryanair.flight.api.model.Flight;
 
@@ -51,6 +51,6 @@ public interface ServiceHelper {
      * @param linearDirectFlightMap The map to store direct flight data.
      * @param directFlightList The list of direct flight data.
      */
-    void linearizingDepartingAndArrivingDirectFlights(HashMap<String, List<Flight>> linearDirectFlightMap, List<SelectedFlightDataDto> directFlightList);
+    void linearizingDepartingAndArrivingDirectFlights(HashMap<String, List<Flight>> linearDirectFlightMap, List<FlightDataDto> directFlightList);
 }
 
