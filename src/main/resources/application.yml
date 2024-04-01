@@ -1,0 +1,25 @@
+server:
+  port : 8383
+  shutdown : graceful
+spring:
+  cloud:
+    config:
+      enabled: false
+
+backend:
+  ryanair:
+    api:
+      base-url: https://services-api.ryanair.com
+      read-timeout: 20000
+      connect-timeout: 20000
+      write-timeout: 20000
+      max-in-memory-buffer-size-mb: 16
+    endpoint:
+      routes: /views/locate/3/routes
+      schedules: /timtbl/3/schedules/{departure}/{arrival}/years/{year}/months/{month}
+
+logging:
+  level:
+    org:
+      springframework: INFO
+      ryanair: TRACE
