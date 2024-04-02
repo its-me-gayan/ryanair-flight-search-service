@@ -54,7 +54,18 @@ public class FlightSearchHandler {
                             return ServerResponse.status(abstractResponse.getResponseCode()).bodyValue(abstractResponse);
                         })
                 )
-                .orElseGet(() -> ServerResponse.badRequest().bodyValue(responseGenerator.processErrorResponse(HttpStatus.BAD_REQUEST, ErrorMessage.ERR_INVALID_REQ_PARAMETERS, ErrorMessage.ERR_INVALID_REQ_PARAMETERS)));
+                .orElseGet(() ->
+                        ServerResponse.badRequest()
+                                .bodyValue(
+                                        responseGenerator
+                                                .processErrorResponse(HttpStatus.BAD_REQUEST,
+                                                        ErrorMessage.ERR_INVALID_REQ_PARAMETERS,
+                                                        ErrorMessage.ERR_INVALID_REQ_PARAMETERS))
+                                .onErrorResume(throwable -> {
+                                    AbstractResponse abstractResponse = responseGenerator.processExceptionResponse(throwable);
+                                    return ServerResponse.status(abstractResponse.getResponseCode()).bodyValue(abstractResponse);
+                                })
+                );
     }
 
     /**
