@@ -10,8 +10,9 @@ Spring Boot based Reactive RESTful API application which serves information abou
 # Instructions and Notes
 Application can access using below mentioned url
 
-http://localhost:8080/api/v1/flight/interconnections?departure=DUB&arrival=WRO&departureDateTime=2024-04-03T07:00
-&arrivalDateTime=2024-04-03T20:26
+[http://localhost:8080/api/v1/flight/interconnections?departure=DUB&arrival=WRO&departureDateTime=2024-04-03T07:00&arrivalDateTime=2024-04-03T20:26
+](http://localhost:8080/api/v1/flight/interconnections?departure=STN&arrival=WRO&departureDateTime=2024-04-03T07:00&arrivalDateTime=2024-04-03T19:26)
+
 
 Note: I have made the final response more readable and generic as follows while maintaing the requetsted response form (requested final response is under `data` section
 
