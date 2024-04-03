@@ -9,7 +9,6 @@ Application can access using thi surl -> http://localhost:8080/api/v1/flight/int
 
 
 
-
-> Note: I have made the final response more readbale and generic as follows while maintaing the requetsted response form (requested request form is under `data` section
+Note: I have made the final response more readbale and generic as follows while maintaing the requetsted response form (requested request form is under `data` section
 
 ![screenshot](scr_cpt.jpg)
