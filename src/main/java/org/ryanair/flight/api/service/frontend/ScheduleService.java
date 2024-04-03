@@ -1,8 +1,10 @@
 package org.ryanair.flight.api.service.frontend;
 
-import org.ryanair.flight.api.dto.FlightDataDto;
 import org.ryanair.flight.api.dto.ScheduledServiceDto;
+import org.ryanair.flight.api.model.Flight;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 /**
  * Author: Gayan Sanjeewa
@@ -23,7 +25,7 @@ public interface ScheduleService {
      * @param scheduledServiceDto The DTO containing information for scheduling departing flights.
      * @return A Mono emitting FlightDataDto containing scheduled departing flight data.
      */
-    Mono<FlightDataDto>  getScheduledDepartingFlightData(ScheduledServiceDto scheduledServiceDto);
+    Mono<List<Flight>>  getScheduledDepartingFlightData(ScheduledServiceDto scheduledServiceDto);
 
     /**
      * Retrieves scheduled arriving flight data based on the provided ScheduledServiceDto.
@@ -31,7 +33,7 @@ public interface ScheduleService {
      * @param scheduledServiceDto The DTO containing information for scheduling arriving flights.
      * @return A Mono emitting FlightDataDto containing scheduled arriving flight data.
      */
-    Mono<FlightDataDto> getScheduledArrivingFlightData(ScheduledServiceDto scheduledServiceDto);
+    Mono<List<Flight>> getScheduledArrivingFlightData(ScheduledServiceDto scheduledServiceDto);
 
     /**
      * Retrieves scheduled direct flight data based on the provided ScheduledServiceDto.
@@ -39,5 +41,5 @@ public interface ScheduleService {
      * @param scheduledServiceDto The DTO containing information for scheduling direct flights.
      * @return A Mono emitting FlightDataDto containing scheduled direct flight data.
      */
-    Mono<FlightDataDto> getScheduledDirectFlightData(ScheduledServiceDto scheduledServiceDto);
+    Mono<List<Flight>> getScheduledDirectFlightData(ScheduledServiceDto scheduledServiceDto);
 }

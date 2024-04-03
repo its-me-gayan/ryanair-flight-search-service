@@ -7,6 +7,7 @@ import org.ryanair.flight.api.exception.DataProcessingCommonServiceException;
 import org.ryanair.flight.api.exception.DataValidationException;
 import org.ryanair.flight.api.helper.ResponseGenerator;
 import org.ryanair.flight.api.util.Constant;
+import org.ryanair.flight.api.util.ResponseMessage;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -33,9 +34,9 @@ public class ResponseGeneratorImpl implements ResponseGenerator {
         if(!finalResponse.isEmpty()){
             long directFlightCount = finalResponse.stream().filter(finalFlightResponseDto -> finalFlightResponseDto.getStops() == 0).count();
             long interConnectedFlightCount = finalResponse.stream().filter(finalFlightResponseDto -> finalFlightResponseDto.getStops() > 0).count();
-            return createAbstractResponse(finalResponse, HttpStatus.OK , Constant.RESPONSE_MESSAGE_SUCCESS,Constant.RESPONSE_MESSAGE_SUCCESS + String.format(Constant.RESPONSE_DESCRIPTION_INFO , directFlightCount,interConnectedFlightCount));
+            return createAbstractResponse(finalResponse, HttpStatus.OK , ResponseMessage.RESPONSE_MESSAGE_SUCCESS,ResponseMessage.RESPONSE_MESSAGE_SUCCESS + String.format(ResponseMessage.RESPONSE_DESCRIPTION_INFO , directFlightCount,interConnectedFlightCount));
         }else {
-            return createAbstractResponse(finalResponse,HttpStatus.BAD_GATEWAY , Constant.RESPONSE_MESSAGE_NO_CONTENT,Constant.RESPONSE_MESSAGE_NO_CONTENT);
+            return createAbstractResponse(finalResponse,HttpStatus.NO_CONTENT , ResponseMessage.RESPONSE_MESSAGE_NO_CONTENT,ResponseMessage.RESPONSE_MESSAGE_NO_CONTENT);
         }
     }
     /**
@@ -50,14 +51,14 @@ public class ResponseGeneratorImpl implements ResponseGenerator {
 
         return switch (throwable) {
             case BackendInvocationException backendInvocationException ->
-                    processErrorResponseInternal(HttpStatus.BAD_GATEWAY, Constant.RESPONSE_MESSAGE_FAILED, throwable.getMessage());
+                    processErrorResponseInternal(HttpStatus.BAD_GATEWAY, ResponseMessage.RESPONSE_MESSAGE_FAILED, ResponseMessage.RESPONSE_MESSAGE_FAILED +" : "+throwable.getMessage());
             case DataProcessingCommonServiceException dataProcessingCommonServiceException ->
-                    processErrorResponseInternal(HttpStatus.BAD_REQUEST, Constant.RESPONSE_MESSAGE_FAILED, throwable.getMessage());
+                    processErrorResponseInternal(HttpStatus.BAD_REQUEST, ResponseMessage.RESPONSE_MESSAGE_FAILED, ResponseMessage.RESPONSE_MESSAGE_FAILED +" : "+throwable.getMessage());
             case DataValidationException dataValidationException ->
-                    processErrorResponseInternal(HttpStatus.BAD_REQUEST, Constant.RESPONSE_MESSAGE_FAILED, throwable.getMessage());
+                    processErrorResponseInternal(HttpStatus.BAD_REQUEST, ResponseMessage.RESPONSE_MESSAGE_FAILED, ResponseMessage.RESPONSE_MESSAGE_FAILED +" : "+throwable.getMessage());
             case null, default -> {
                 assert throwable != null;
-                yield processErrorResponseInternal(HttpStatus.INTERNAL_SERVER_ERROR, Constant.RESPONSE_MESSAGE_FAILED, throwable.getMessage());
+                yield processErrorResponseInternal(HttpStatus.INTERNAL_SERVER_ERROR, ResponseMessage.RESPONSE_MESSAGE_FAILED, ResponseMessage.RESPONSE_MESSAGE_FAILED +" : "+throwable.getMessage());
             }
         };
     }

@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Author: Gayan Sanjeewa
@@ -58,12 +55,11 @@ public class RouteServiceImpl implements RouteService {
      */
     private Mono<List<PossibleRoutesDto>> extractAllDirectAndInterConnectedRoutesFromTheResponse(List<RouteAPIResponseModel> list, String departureIATACode, String arrivalIATACode) {
         List<PossibleRoutesDto> possibleRoutesDtoList = new ArrayList<>();
-        List<RouteAPIResponseModel> directRoute = findDirectRoute(list, departureIATACode, arrivalIATACode);
-
-        if (!directRoute.isEmpty()) {
+        Optional<RouteAPIResponseModel> directRoute = findDirectRoute(list, departureIATACode, arrivalIATACode);
+        if (directRoute.isPresent()) {
             PossibleRoutesDto possibleRoutesDto = new PossibleRoutesDto();
             possibleRoutesDto.setType(Constant.ROUTE_TYPE_DIRECT);
-            possibleRoutesDto.setRouteDetails(Collections.singletonList(directRoute));
+            possibleRoutesDto.setDirectRoute(directRoute.get());
             possibleRoutesDtoList.add(possibleRoutesDto);
         }
 
@@ -79,11 +75,11 @@ public class RouteServiceImpl implements RouteService {
      * @param arrivalIATACode   The IATA code of the arrival airport.
      * @return A list of RouteAPIResponseModel representing all direct routes.
      */
-    private List<RouteAPIResponseModel> findDirectRoute(List<RouteAPIResponseModel> list, String departureIATACode, String arrivalIATACode) {
+    private Optional<RouteAPIResponseModel> findDirectRoute(List<RouteAPIResponseModel> list, String departureIATACode, String arrivalIATACode) {
         return list.stream()
                 .filter(routeAPIResponseModel ->
                         routeAPIResponseModel.getAirportFrom().equals(departureIATACode) && routeAPIResponseModel.getAirportTo().equals(arrivalIATACode))
-                .toList();
+                .findAny();
     }
 
     /**
@@ -102,10 +98,9 @@ public class RouteServiceImpl implements RouteService {
                 for (RouteAPIResponseModel mm : list) {
                     if (airportTo.equals(mm.getAirportFrom()) && (mm.getAirportTo().equals(arrivalIATACode))) {
                             PossibleRoutesDto possibleRoutesDto = new PossibleRoutesDto();
-                            possibleRoutesDto.setType(Constant.ROUTE_TYPE_ONE_STOP);
-                            possibleRoutesDto.setRouteDetails(Collections.singletonList(Arrays.asList(model, mm)));
+                            possibleRoutesDto.setType(Constant.ROUTE_TYPE_INTER_CONNECTED);
+                            possibleRoutesDto.setInterConnectedRoute(Arrays.asList(model, mm));
                             possibleRoutesDtoList.add(possibleRoutesDto);
-                            return;
                     }
                 }
             }

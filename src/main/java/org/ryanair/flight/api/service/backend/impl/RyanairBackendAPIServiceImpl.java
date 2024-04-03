@@ -9,7 +9,7 @@ import org.ryanair.flight.api.model.ScheduleAPIRequestModel;
 import org.ryanair.flight.api.model.ScheduleAPIResponseModel;
 import org.ryanair.flight.api.service.backend.BackendAPIService;
 import org.ryanair.flight.api.util.Constant;
-import org.ryanair.flight.api.util.ErrorMessage;
+import org.ryanair.flight.api.util.ResponseMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -65,7 +65,7 @@ public class RyanairBackendAPIServiceImpl implements BackendAPIService {
                         this::checkRouteValidityAndFilter
                 ).toList();
         if(list.isEmpty()){
-            return Mono.error(new DataValidationException(ErrorMessage.ERR_MSG_NO_VALID_ROUTE_FOUND));
+            return Mono.error(new DataValidationException(ResponseMessage.ERR_MSG_NO_VALID_ROUTE_FOUND));
         }else {
             return Mono.just(list);
         }

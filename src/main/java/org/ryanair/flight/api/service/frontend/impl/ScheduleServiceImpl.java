@@ -1,7 +1,6 @@
 package org.ryanair.flight.api.service.frontend.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.ryanair.flight.api.dto.FlightDataDto;
 import org.ryanair.flight.api.dto.RequestDataDto;
 import org.ryanair.flight.api.dto.ScheduledServiceDto;
 import org.ryanair.flight.api.dto.YearMonthDataDto;
@@ -40,7 +39,7 @@ public class ScheduleServiceImpl implements ScheduleService {
      * @return A Mono emitting FlightDataDto containing scheduled departing flight data.
      */
     @Override
-    public Mono<FlightDataDto> getScheduledDepartingFlightData(ScheduledServiceDto scheduledServiceDto) {
+    public Mono<List<Flight>> getScheduledDepartingFlightData(ScheduledServiceDto scheduledServiceDto) {
 
         ScheduleAPIRequestModel departingBuild = ScheduleAPIRequestModel
                 .builder()
@@ -59,7 +58,6 @@ public class ScheduleServiceImpl implements ScheduleService {
                         filterAllAvailableFlightsFromScheduleResponse(
                                 scheduledServiceDto.getRequestData(),
                                 scheduleAPIResponseModel,
-                                scheduledServiceDto.getDepartingRouteData(),
                                 scheduledServiceDto.getYearMonthData()
                         )
                 );
@@ -73,7 +71,7 @@ public class ScheduleServiceImpl implements ScheduleService {
      * @return A Mono emitting FlightDataDto containing scheduled arriving flight data.
      */
     @Override
-    public Mono<FlightDataDto> getScheduledArrivingFlightData(ScheduledServiceDto scheduledServiceDto) {
+    public Mono<List<Flight>> getScheduledArrivingFlightData(ScheduledServiceDto scheduledServiceDto) {
 
         ScheduleAPIRequestModel arrivingBuild = ScheduleAPIRequestModel
                 .builder()
@@ -89,7 +87,6 @@ public class ScheduleServiceImpl implements ScheduleService {
                 filterAllAvailableFlightsFromScheduleResponse(
                         scheduledServiceDto.getRequestData(),
                         scheduleAPIResponseModel,
-                        scheduledServiceDto.getArrivingRouteData(),
                         scheduledServiceDto.getYearMonthData()
                 )
         );
@@ -102,7 +99,7 @@ public class ScheduleServiceImpl implements ScheduleService {
      * @return A Mono emitting FlightDataDto containing scheduled direct flight data.
      */
     @Override
-    public Mono<FlightDataDto> getScheduledDirectFlightData(ScheduledServiceDto scheduledServiceDto) {
+    public Mono<List<Flight>> getScheduledDirectFlightData(ScheduledServiceDto scheduledServiceDto) {
 
             ScheduleAPIRequestModel scheduleAPIRequestModel = ScheduleAPIRequestModel
                     .builder()
@@ -117,7 +114,6 @@ public class ScheduleServiceImpl implements ScheduleService {
                     filterAllAvailableFlightsFromScheduleResponse(
                             scheduledServiceDto.getRequestData(),
                             scheduleAPIResponseModel,
-                            scheduledServiceDto.getDirectRouteData(),
                             scheduledServiceDto.getYearMonthData()
                     )
             );
@@ -128,11 +124,10 @@ public class ScheduleServiceImpl implements ScheduleService {
      *
      * @param requestDataDto    The DTO containing the request data.
      * @param scheduleAPIResponseModel The response model containing schedule data.
-     * @param routeAPIResponseModel    The response model containing route data.
      * @param yearMonthDataDto  The DTO containing year and month data.
      * @return A Mono emitting FlightDataDto containing filtered flight data.
      */
-    private Mono<FlightDataDto> filterAllAvailableFlightsFromScheduleResponse(RequestDataDto requestDataDto, ScheduleAPIResponseModel scheduleAPIResponseModel, RouteAPIResponseModel routeAPIResponseModel, YearMonthDataDto yearMonthDataDto) {
+    private Mono<List<Flight>> filterAllAvailableFlightsFromScheduleResponse(RequestDataDto requestDataDto, ScheduleAPIResponseModel scheduleAPIResponseModel, YearMonthDataDto yearMonthDataDto) {
         List<Flight> selectedFlights = new ArrayList<>();
         int month = scheduleAPIResponseModel.getMonth();
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DATE_FORMAT_ISO);
@@ -144,17 +139,18 @@ public class ScheduleServiceImpl implements ScheduleService {
 
                 String flightArrivalTimeString = baseDateString.concat(flight.getArrivalTime());
                 String flightDepartureTimeString = baseDateString.concat(flight.getDepartureTime());
-
                 LocalDateTime flightArrivalTime = LocalDateTime.parse(flightArrivalTimeString, dateTimeFormatter);
                 LocalDateTime flightDepartureTime = LocalDateTime.parse(flightDepartureTimeString, dateTimeFormatter);
-
-                if (flightDepartureTime.isAfter(requestDataDto.getDepartureDateTime()) && flightArrivalTime.isBefore(requestDataDto.getArrivalDateTime())) {
-                    selectedFlights.add(new Flight(flight.getCarrierCode(), flight.getNumber(), flightDepartureTime.format(dateTimeFormatter), flightArrivalTime.format(dateTimeFormatter)));
+                if (
+                        (flightDepartureTime.isAfter(requestDataDto.getDepartureDateTime()) && flightDepartureTime.isBefore(requestDataDto.getArrivalDateTime())) &&
+                                (flightArrivalTime.isBefore(requestDataDto.getArrivalDateTime()) && flightArrivalTime.isAfter(requestDataDto.getDepartureDateTime()) )
+                ) {
+                    selectedFlights.add(
+                            new Flight(flight.getCarrierCode(), flight.getNumber(), flightDepartureTime.format(dateTimeFormatter), flightArrivalTime.format(dateTimeFormatter))
+                    );
                 }
-
             }
-
         }
-        return Mono.just(FlightDataDto.builder().arrival(routeAPIResponseModel.getAirportTo()).departure(routeAPIResponseModel.getAirportFrom()).selectedFlights(selectedFlights).build());
+        return Mono.just(selectedFlights);
     }
 }

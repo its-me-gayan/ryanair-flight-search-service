@@ -5,7 +5,7 @@ import org.ryanair.flight.api.dto.AbstractResponse;
 import org.ryanair.flight.api.dto.RequestDataDto;
 import org.ryanair.flight.api.helper.ResponseGenerator;
 import org.ryanair.flight.api.service.frontend.FlightSearchService;
-import org.ryanair.flight.api.util.ErrorMessage;
+import org.ryanair.flight.api.util.ResponseMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -47,7 +47,7 @@ public class FlightSearchHandler {
                                 )
                         )
                 )
-                .map(requestDataDto -> flightSearchService.findAllAvailableFlights(requestDataDto)
+                .map(requestDataDto -> flightSearchService.findFlights(requestDataDto)
                         .flatMap(finalFlightResponseDtoList -> ServerResponse.ok().bodyValue(responseGenerator.processSuccessResponse(finalFlightResponseDtoList)))
                         .onErrorResume(throwable -> {
                             AbstractResponse abstractResponse = responseGenerator.processExceptionResponse(throwable);
@@ -59,8 +59,8 @@ public class FlightSearchHandler {
                                 .bodyValue(
                                         responseGenerator
                                                 .processErrorResponse(HttpStatus.BAD_REQUEST,
-                                                        ErrorMessage.ERR_INVALID_REQ_PARAMETERS,
-                                                        ErrorMessage.ERR_INVALID_REQ_PARAMETERS))
+                                                        ResponseMessage.RESPONSE_MESSAGE_FAILED,
+                                                        ResponseMessage.ERR_INVALID_REQ_PARAMETERS))
                                 .onErrorResume(throwable -> {
                                     AbstractResponse abstractResponse = responseGenerator.processExceptionResponse(throwable);
                                     return ServerResponse.status(abstractResponse.getResponseCode()).bodyValue(abstractResponse);
@@ -81,7 +81,7 @@ public class FlightSearchHandler {
         if (!validate(departure, arrival, departureDateTime, arrivalDateTime)) {
             return null;
         }
-        return new RequestDataDto(departure, arrival, LocalDateTime.parse(departureDateTime), LocalDateTime.parse(arrivalDateTime));
+        return new RequestDataDto(arrival, departure, LocalDateTime.parse(departureDateTime), LocalDateTime.parse(arrivalDateTime));
     }
 
     /**

@@ -24,5 +24,5 @@ public interface FlightSearchService {
      * @param requestDataDto The request data containing flight search parameters.
      * @return A Mono emitting a list of FinalFlightResponseDto objects representing available flights.
      */
-    Mono<List<FinalFlightResponseDto>> findAllAvailableFlights(RequestDataDto requestDataDto);
+    Mono<List<FinalFlightResponseDto>> findFlights(RequestDataDto requestDataDto);
 }

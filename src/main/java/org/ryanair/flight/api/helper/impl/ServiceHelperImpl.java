@@ -2,20 +2,18 @@ package org.ryanair.flight.api.helper.impl;
 
 import org.ryanair.flight.api.dto.InterConnectedFlightData;
 import org.ryanair.flight.api.dto.RequestDataDto;
-import org.ryanair.flight.api.dto.FlightDataDto;
 import org.ryanair.flight.api.dto.YearMonthDataDto;
 import org.ryanair.flight.api.helper.ServiceHelper;
 import org.ryanair.flight.api.model.Flight;
 import org.ryanair.flight.api.util.Constant;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Author: Gayan Sanjeewa
@@ -85,59 +83,28 @@ public class ServiceHelperImpl implements ServiceHelper {
 
     @Override
     public void linearizingDepartingAndArrivingInterconnectedFlights(HashMap<String, List<Flight>> departFlightDataMap, HashMap<String, List<Flight>> arriveFlightDataMap, List<InterConnectedFlightData> interConnectedFlightData) {
-
         for (InterConnectedFlightData connectedFlightData : interConnectedFlightData) {
-            List<FlightDataDto> arriveFlightData = connectedFlightData.getArriveFlightData();
-            List<FlightDataDto> departureFlightData = connectedFlightData.getDepartureFlightData();
 
-            for (FlightDataDto flightDataDto : arriveFlightData) {
-                String arrival = flightDataDto.getArrival();
-                String departure = flightDataDto.getDeparture();
+            String departSection = connectedFlightData.getDepartSection();
+            String arrivingSection = connectedFlightData.getArrivingSection();
+            if(StringUtils.hasText(departSection) && StringUtils.hasText(arrivingSection)) {
+                List<Flight> arriveFlightData = connectedFlightData.getArriveFlightData();
+                List<Flight> departureFlightData = connectedFlightData.getDepartureFlightData();
 
-                String key = departure + "-" + arrival;
-                if (Objects.isNull(arriveFlightDataMap.get(key))) {
-                    arriveFlightDataMap.put(key, flightDataDto.getSelectedFlights());
+                List<Flight> arFlights = arriveFlightDataMap.get(arrivingSection);
+                if (CollectionUtils.isEmpty(arFlights)) {
+                    arriveFlightDataMap.put(arrivingSection, arriveFlightData);
                 } else {
-                    arriveFlightDataMap.get(key).addAll(flightDataDto.getSelectedFlights());
+                    arriveFlightDataMap.get(arrivingSection).addAll(arriveFlightData);
                 }
 
-            }
-
-            for (FlightDataDto flightDataDto : departureFlightData) {
-                String arrival = flightDataDto.getArrival();
-                String departure = flightDataDto.getDeparture();
-
-                String key = departure + "-" + arrival;
-
-                if (Objects.isNull(departFlightDataMap.get(key))) {
-                    departFlightDataMap.put(key, flightDataDto.getSelectedFlights());
+                List<Flight> drFlights = departFlightDataMap.get(departSection);
+                if (CollectionUtils.isEmpty(drFlights)) {
+                    departFlightDataMap.put(departSection, departureFlightData);
                 } else {
-                    departFlightDataMap.get(key).addAll(flightDataDto.getSelectedFlights());
+                    departFlightDataMap.get(departSection).addAll(departureFlightData);
                 }
-
             }
         }
     }
-
-    @Override
-    public void linearizingDepartingAndArrivingDirectFlights(HashMap<String, List<Flight>> linearDirectFlightMap, List<FlightDataDto> directFlightList) {
-
-        for (FlightDataDto directFlightData : directFlightList) {
-            String arrival = directFlightData.getArrival();
-            String departure = directFlightData.getDeparture();
-            String key = departure + "-" + arrival;
-
-            List<Flight> existingFlights = linearDirectFlightMap.getOrDefault(key, new ArrayList<>());
-            List<Flight> selectedFlights = directFlightData.getSelectedFlights();
-
-            for (Flight flight : selectedFlights) {
-                if (!existingFlights.contains(flight)) {
-                    existingFlights.add(flight);
-                }
-            }
-
-            linearDirectFlightMap.put(key, existingFlights);
-        }
-    }
-
 }

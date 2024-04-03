@@ -1,6 +1,9 @@
 package org.ryanair.flight.api.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.ryanair.flight.api.model.RouteAPIResponseModel;
 
 import java.util.List;
@@ -8,18 +11,15 @@ import java.util.List;
 /**
  * Author: Gayan Sanjeewa
  * User: gayan
- * Date: 3/29/24
- * Time: 7:38 PM
+ * Date: 4/2/24
+ * Time: 6:10 PM
  */
-@Getter
-@Setter
-@ToString
+
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class PossibleRoutesDto {
-
-    private String type;
+@Getter
+@Setter
+public class RouteDetailsDto {
     private RouteAPIResponseModel directRoute;
     private List<RouteAPIResponseModel> interConnectedRoute;
 }

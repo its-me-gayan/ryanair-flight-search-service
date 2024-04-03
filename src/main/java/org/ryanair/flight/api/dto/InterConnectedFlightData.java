@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.ryanair.flight.api.model.Flight;
 
 import java.util.List;
 
@@ -18,6 +19,8 @@ import java.util.List;
 @Builder
 @Data
 public class InterConnectedFlightData {
-    private List<FlightDataDto> departureFlightData;
-    private List<FlightDataDto> arriveFlightData;
+    private String departSection; //Exp : DUB-STN
+    private String arrivingSection; //Exp : STN-WRO
+    private List<Flight> departureFlightData;
+    private List<Flight> arriveFlightData;
 }

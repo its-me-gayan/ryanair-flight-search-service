@@ -13,6 +13,7 @@ import org.ryanair.flight.api.util.Constant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -47,16 +48,15 @@ public class FlightSearchServiceImpl implements FlightSearchService {
      * @return A Mono emitting a list of FinalFlightResponseDto objects.
      */
     @Override
-    public Mono<List<FinalFlightResponseDto>> findAllAvailableFlights(RequestDataDto requestDataDto) {
-
+    public Mono<List<FinalFlightResponseDto>> findFlights(RequestDataDto requestDataDto) {
         String arrival = requestDataDto.getArrival();
         String departure = requestDataDto.getDeparture();
-
+        log.debug("processing received request findFlights()");
         return routeService.findAllPossibleRoutes(departure, arrival) //finding all possible routes
                 .flatMap(routeAPIResponseModels ->
                         processAllAvailableInterconnectedAndDirectFlights(routeAPIResponseModels, requestDataDto)) // finding all available flights
                 .flatMap(availableFlightDto ->
-                        processCollectedFlightsToFinalResponse(availableFlightDto, requestDataDto)); //combining all connected flights together
+                        processCollectedFlightsToFinalResponse(availableFlightDto, requestDataDto)); //combining all available flights together
 
     }
 
@@ -67,18 +67,23 @@ public class FlightSearchServiceImpl implements FlightSearchService {
      * @return A Mono emitting a list of FinalFlightResponseDto objects.
      */
     private Mono<List<FinalFlightResponseDto>> processCollectedFlightsToFinalResponse(AvailableFlightDto availableFlightDto, RequestDataDto requestDataDto) {
-
+        log.debug("Started generating final response");
         List<FinalFlightResponseDto> finalFlightResponseDtoList = new ArrayList<>();
 
         //generating final response for the direct flights
-        List<FlightDataDto> allAvailableDirectFlights = availableFlightDto.getDirectFlights();
-        generateAndAttachDirectFlightsToFinaResponse(finalFlightResponseDtoList, allAvailableDirectFlights);
+        List<Flight> allAvailableDirectFlights = availableFlightDto.getDirectFlights();
+        generateAndAttachDirectFlightsToFinaResponse(finalFlightResponseDtoList, allAvailableDirectFlights,requestDataDto);
 
         //generating final response for the interconnected flights with checking conditions
-        List<InterConnectedFlightData> allFoundedInterconnectedFlights = availableFlightDto.getInterconnectedFlights();
+        List<InterConnectedFlightData> allFoundedInterconnectedFlights = availableFlightDto.getInterconnectedFlights()
+                .stream().filter(interConnectedFlightData ->
+                        StringUtils.hasText(interConnectedFlightData.getDepartSection()) &&
+                                StringUtils.hasText(interConnectedFlightData.getArrivingSection())
+                ).toList();
         generateAndAttachInterConnectedFlightsToFinaResponse(
                 finalFlightResponseDtoList, allFoundedInterconnectedFlights, requestDataDto);
 
+        log.debug("finished generating final response");
 
         return Mono.just(finalFlightResponseDtoList);
     }
@@ -107,30 +112,21 @@ public class FlightSearchServiceImpl implements FlightSearchService {
      * @param finalFlightResponseDtoList The list to which final flight response DTOs are added.
      * @param directFlights List of direct flight data.
      */
-    private void generateAndAttachDirectFlightsToFinaResponse(List<FinalFlightResponseDto> finalFlightResponseDtoList, List<FlightDataDto> directFlights) {
+    private void generateAndAttachDirectFlightsToFinaResponse(List<FinalFlightResponseDto> finalFlightResponseDtoList, List<Flight> directFlights, RequestDataDto requestDataDto) {
         if (!CollectionUtils.isEmpty(directFlights)) {
-            HashMap<String, List<Flight>> directFlightMap = new HashMap<>();
-
-            serviceHelper.linearizingDepartingAndArrivingDirectFlights(directFlightMap, directFlights);
-
-            directFlightMap.forEach((s, flightList) -> {
-                String[] splitAirport = s.split("-");
-                flightList.forEach(flight ->
-                        finalFlightResponseDtoList.add(
-                                FinalFlightResponseDto.builder()
-                                        .stops(0)
-                                        .legs(
-                                                Collections.singletonList(
-                                                DataLegs.builder()
-                                                        .departureDateTime(flight.getDepartureTime())
-                                                        .arrivalDateTime(flight.getArrivalTime())
-                                                        .departureAirport(splitAirport[0])
-                                                        .arrivalAirport(splitAirport[1])
-                                                        .build()))
-                                        .build()
-                        )
-                );
-            });
+            directFlights.forEach(flight -> finalFlightResponseDtoList.add(
+                    FinalFlightResponseDto.builder()
+                            .stops(0)
+                            .legs(
+                                    Collections.singletonList(
+                                            DataLegs.builder()
+                                                    .departureDateTime(flight.getDepartureTime())
+                                                    .arrivalDateTime(flight.getArrivalTime())
+                                                    .departureAirport(requestDataDto.getDeparture())
+                                                    .arrivalAirport(requestDataDto.getArrival())
+                                                    .build()))
+                            .build()
+            ));
         }
     }
 
@@ -145,7 +141,6 @@ public class FlightSearchServiceImpl implements FlightSearchService {
     private void findAndMapRelatedInterConnectedFlights(HashMap<String, List<Flight>> arrivingFlightsDataMap, HashMap<String, List<Flight>> departingFlightsDataMap, RequestDataDto requestDataDto, List<FinalFlightResponseDto> finalFlightResponseDtoList) {
         departingFlightsDataMap.forEach((key, departingFlights) -> {
             String[] split = key.split("-");
-            String splitDepartingAirport = split[0];
             String splitArrivingAirport = split[1];
             departingFlights.forEach(departingFlight -> {
                 List<Flight> arrivingFlights = arrivingFlightsDataMap.get(split[1] + "-" + requestDataDto.getArrival());
@@ -158,25 +153,29 @@ public class FlightSearchServiceImpl implements FlightSearchService {
                             .findTwoHourAfterClosestFlightByGivenDateTime(flightArrivingDateTime, arrivingFlights);
 
                     if (Objects.nonNull(closestFoundedArrivingFlight)) {
-                        List<DataLegs> legs = new ArrayList<>();
-                        legs.add(
-                                DataLegs.builder()
-                                        .departureAirport(requestDataDto.getDeparture())
-                                        .arrivalAirport(splitArrivingAirport)
-                                        .arrivalDateTime(departingFlight.getArrivalTime())
-                                        .departureDateTime(departingFlight.getDepartureTime())
-                                        .build()
-                        );
+                        DataLegs dataLegsDepart = DataLegs.builder()
+                                .departureAirport(requestDataDto.getDeparture())
+                                .arrivalAirport(splitArrivingAirport)
+                                .arrivalDateTime(departingFlight.getArrivalTime())
+                                .departureDateTime(departingFlight.getDepartureTime())
+                                .build();
+                        DataLegs dataLegsArrv = DataLegs.builder()
+                                .departureAirport(splitArrivingAirport)
+                                .arrivalAirport(requestDataDto.getArrival())
+                                .arrivalDateTime(closestFoundedArrivingFlight.getArrivalTime())
+                                .departureDateTime(closestFoundedArrivingFlight.getDepartureTime())
+                                .build();
 
-                        legs.add(
-                                DataLegs.builder()
-                                        .departureAirport(splitDepartingAirport)
-                                        .arrivalAirport(requestDataDto.getArrival())
-                                        .arrivalDateTime(closestFoundedArrivingFlight.getArrivalTime())
-                                        .departureDateTime(closestFoundedArrivingFlight.getDepartureTime())
-                                        .build()
-                        );
-                        finalFlightResponseDtoList.add(FinalFlightResponseDto.builder().stops(1).legs(legs).build());
+                       boolean areFlightsAlreadyChosen = finalFlightResponseDtoList
+                                .stream()
+                                .anyMatch(finalFlightResponseDto -> finalFlightResponseDto.getLegs().contains(dataLegsArrv) || finalFlightResponseDto.getLegs().contains(dataLegsDepart));
+
+                       if(!areFlightsAlreadyChosen) {
+                           List<DataLegs> legs = new ArrayList<>();
+                           legs.add(dataLegsDepart);
+                           legs.add(dataLegsArrv);
+                           finalFlightResponseDtoList.add(FinalFlightResponseDto.builder().stops(1).legs(legs).build());
+                       }
                     }
                 });
             });
@@ -191,50 +190,51 @@ public class FlightSearchServiceImpl implements FlightSearchService {
      * @return A Mono emitting the available flight data.
      * @throws BackendInvocationException if an error occurs during backend invocation.
      */
-    public Mono<AvailableFlightDto> processAllAvailableInterconnectedAndDirectFlights(List<PossibleRoutesDto> allPossibleRoute, RequestDataDto requestDataDto) throws BackendInvocationException {
+    private Mono<AvailableFlightDto> processAllAvailableInterconnectedAndDirectFlights(List<PossibleRoutesDto> allPossibleRoute, RequestDataDto requestDataDto) throws BackendInvocationException {
 
         //filtering and get direct route from the allPossibleRoute list
-        Optional<PossibleRoutesDto> directRoutFirst = allPossibleRoute
+        Optional<PossibleRoutesDto> directRouteOptional = allPossibleRoute
                 .stream()
                 .filter(possibleRoutesDto ->
                         possibleRoutesDto.getType().equals(Constant.ROUTE_TYPE_DIRECT))
-                .findFirst();
+                .findAny();
 
         Flux<InterConnectedFlightData> selectedInterconnectedFLightDataFlux = Flux.empty();
-        Mono<List<FlightDataDto>> selectedDirectFlightListMono = Mono.empty();
+        Mono<List<Flight>> selectedDirectFlightListMono = Mono.empty();
 
         List<YearMonthDataDto> noOfMonthWithYear = serviceHelper.calculateNoOfMonthForTheProvidedDateRange(requestDataDto);
 
-        System.out.println("processing route - " + Constant.ROUTE_TYPE_DIRECT);
-        if (directRoutFirst.isPresent()) {
-            RouteAPIResponseModel directRout = directRoutFirst.get().getRouteDetails().getFirst().getFirst();
-            selectedDirectFlightListMono = getAvailableFlightForTheDirectRouteMono(directRout, noOfMonthWithYear, requestDataDto);
+        log.debug("Processing direct routes - {}",Constant.ROUTE_TYPE_DIRECT);
+
+        if (directRouteOptional.isPresent()) {
+            RouteAPIResponseModel directRoute = directRouteOptional.get().getDirectRoute();
+            log.debug("direct route detected and process - {} to {} " , directRoute.getAirportFrom() , directRoute.getAirportTo());
+            selectedDirectFlightListMono = getAvailableFlightForTheDirectRouteMono(directRoute, noOfMonthWithYear, requestDataDto);
         } else {
-            System.out.println("no direct route found");
+            log.debug("No direct route founded");
         }
 
-        System.out.println("processing routes - " + Constant.ROUTE_TYPE_ONE_STOP);
-
         //filtering and get interconnected routes from the allPossibleRoute list
-        Optional<PossibleRoutesDto> oneStopRoutes = allPossibleRoute
+        log.debug("Processing founded Interconnected routes - {}",Constant.ROUTE_TYPE_INTER_CONNECTED);
+
+        List<PossibleRoutesDto> list = allPossibleRoute
                 .stream()
                 .filter(possibleRoutesDto ->
-                        possibleRoutesDto.getType().equals(Constant.ROUTE_TYPE_ONE_STOP))
-                .findFirst();
-
-        if (oneStopRoutes.isPresent()) {
-            selectedInterconnectedFLightDataFlux = getInterConnectedAvailableFlightFlux(requestDataDto, oneStopRoutes.get(), noOfMonthWithYear);
+                        possibleRoutesDto.getType().equals(Constant.ROUTE_TYPE_INTER_CONNECTED))
+                .toList();
+        if (!list.isEmpty()) {
+            log.debug("Interconnected routes detected and processing " );
+            selectedInterconnectedFLightDataFlux = getInterConnectedAvailableFlightFlux(requestDataDto, list, noOfMonthWithYear);
         } else {
-            System.out.println("no inter connected flight founds");
+            log.debug("No interconnected routes found");
         }
 
         //combining direct flights and interconnected flights mono's together
         return selectedDirectFlightListMono.defaultIfEmpty(Collections.emptyList())
                 .zipWith(selectedInterconnectedFLightDataFlux.collectList().defaultIfEmpty(Collections.emptyList()))
                 .map(tuple -> {
-            List<FlightDataDto> selectedDirectFlights = tuple.getT1();
+            List<Flight> selectedDirectFlights = tuple.getT1();
             List<InterConnectedFlightData> interConnectedFlightData = tuple.getT2();
-
             // Create a new object to hold both types of data
             AvailableFlightDto combinedDetails = new AvailableFlightDto();
             combinedDetails.setDirectFlights(selectedDirectFlights);
@@ -251,35 +251,53 @@ public class FlightSearchServiceImpl implements FlightSearchService {
      * @param noOfMonthWithYear The list of YearMonthDataDto objects.
      * @return Flux emitting InterConnectedFlightData.
      */
-    private Flux<InterConnectedFlightData> getInterConnectedAvailableFlightFlux(RequestDataDto requestDataDto, PossibleRoutesDto interConnectedRoutes, List<YearMonthDataDto> noOfMonthWithYear) {
-        List<List<RouteAPIResponseModel>> oneStopRoutesList = interConnectedRoutes.getRouteDetails();
-        return Flux.fromIterable(oneStopRoutesList)
-                .flatMap(routeAPIResponseModels -> Flux.fromIterable(noOfMonthWithYear)
+    private Flux<InterConnectedFlightData> getInterConnectedAvailableFlightFlux(RequestDataDto requestDataDto, List<PossibleRoutesDto> interConnectedRoutes, List<YearMonthDataDto> noOfMonthWithYear) {
+
+        return Flux.fromIterable(interConnectedRoutes)
+                .flatMap(possibleRoutesDto -> Flux.fromIterable(noOfMonthWithYear)
                         .flatMap(yearMonthDataDto -> {
-            ScheduledServiceDto scheduledServiceDto = ScheduledServiceDto.builder()
-                    .arrivingRouteData(routeAPIResponseModels.getLast()) // Arriving section
-                    .departingRouteData(routeAPIResponseModels.getFirst()) // Departing section
-                    .requestData(requestDataDto)
-                    .yearMonthData(yearMonthDataDto)
-                    .build();
+                            List<RouteAPIResponseModel> interConnectedRoute = possibleRoutesDto.getInterConnectedRoute();
+                            ScheduledServiceDto scheduledServiceDto = ScheduledServiceDto.builder()
+                                    .arrivingRouteData(interConnectedRoute.getLast()) // Arriving section
+                                    .departingRouteData(interConnectedRoute.getFirst()) // Departing section
+                                    .requestData(requestDataDto)
+                                    .yearMonthData(yearMonthDataDto)
+                                    .build();
 
-            Mono<FlightDataDto> scheduledDepartingFlightData = scheduleService.getScheduledDepartingFlightData(scheduledServiceDto);
-            Mono<FlightDataDto> scheduledArrivingFlightData = scheduleService.getScheduledArrivingFlightData(scheduledServiceDto);
-            return Mono.zip(scheduledDepartingFlightData, scheduledArrivingFlightData).map(objects -> {
-                        InterConnectedFlightData interConnectedFlightData = new InterConnectedFlightData();
-                        List<FlightDataDto> departureFlightData = new ArrayList<>();
-                        List<FlightDataDto> arriveFlightData = new ArrayList<>();
+                            Mono<List<Flight>> scheduledDepartingFlightData = scheduleService
+                                    .getScheduledDepartingFlightData(scheduledServiceDto)
+                                    .switchIfEmpty(Mono.just(Collections.emptyList()));
 
-                        departureFlightData.add(objects.getT1());
-                        arriveFlightData.add(objects.getT2());
+                            Mono<List<Flight>> scheduledArrivingFlightData = scheduleService
+                                    .getScheduledArrivingFlightData(scheduledServiceDto)
+                                    .switchIfEmpty(Mono.just(Collections.emptyList()));
 
-                        interConnectedFlightData.setDepartureFlightData(departureFlightData);
-                        interConnectedFlightData.setArriveFlightData(arriveFlightData);
-                        return interConnectedFlightData;
-                    });
-                })
 
-        );
+                            return scheduledDepartingFlightData.zipWith(scheduledArrivingFlightData)
+                                    .map(tuple -> {
+                                        List<Flight> departingFlights = tuple.getT1();
+                                        List<Flight> arrivingFlights = tuple.getT2();
+
+                                        if (departingFlights.isEmpty() || arrivingFlights.isEmpty()) {
+                                           return new InterConnectedFlightData();
+                                        }
+                                        return getInterConnectedFlightData(interConnectedRoute, departingFlights, arrivingFlights);
+
+                                    });
+
+                        })
+                );
+    }
+
+    private static InterConnectedFlightData getInterConnectedFlightData(List<RouteAPIResponseModel> interConnectedRoute, List<Flight> departingFlights, List<Flight> arrivingFlights) {
+        InterConnectedFlightData interConnectedFlightData = new InterConnectedFlightData();
+        RouteAPIResponseModel first = interConnectedRoute.getFirst();
+        RouteAPIResponseModel last = interConnectedRoute.getLast();
+        interConnectedFlightData.setDepartSection(first.getAirportFrom() + "-" + first.getAirportTo());
+        interConnectedFlightData.setArrivingSection(last.getAirportFrom() + "-" + last.getAirportTo());
+        interConnectedFlightData.setDepartureFlightData(departingFlights);
+        interConnectedFlightData.setArriveFlightData(arrivingFlights);
+        return interConnectedFlightData;
     }
 
 
@@ -290,16 +308,20 @@ public class FlightSearchServiceImpl implements FlightSearchService {
      * @param requestDataDto The request data.
      * @return Mono emitting a list of FlightDataDto objects.
      */
-    private Mono<List<FlightDataDto>> getAvailableFlightForTheDirectRouteMono(
+    private Mono<List<Flight>> getAvailableFlightForTheDirectRouteMono(
             RouteAPIResponseModel directRoute,
             List<YearMonthDataDto> noOfMonthWithYear,
-            RequestDataDto requestDataDto)
-    {
-        return Flux.fromIterable(noOfMonthWithYear).flatMap(yearMonthDataDto ->
-                scheduleService.getScheduledDirectFlightData(ScheduledServiceDto.builder()
-                .directRouteData(directRoute) // direct route section
-                .requestData(requestDataDto)
-                .yearMonthData(yearMonthDataDto)
-                .build())).collectList();
+            RequestDataDto requestDataDto) {
+        return Flux.fromIterable(noOfMonthWithYear)
+                .flatMap(yearMonthDataDto -> {
+                    ScheduledServiceDto build = ScheduledServiceDto.builder()
+                            .directRouteData(directRoute) // direct route section
+                            .requestData(requestDataDto)
+                            .yearMonthData(yearMonthDataDto)
+                            .build();
+                    return scheduleService.getScheduledDirectFlightData(build);
+                })
+                .flatMapIterable(flightList -> flightList) // Flatten the nested lists
+                .collectList();// Collect all flights into one list
     }
 }
