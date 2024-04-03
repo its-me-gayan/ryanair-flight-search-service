@@ -14,6 +14,6 @@ FROM amazoncorretto:21
 # Copy the built JAR file from the previous stage to the container
 COPY --from=build /app/target/ryanair-flight-search-service-1.0.0.jar .
 WORKDIR /app
-EXPOSE 8383
+EXPOSE 8080
 
 ENTRYPOINT ["java","-jar","/ryanair-flight-search-service-1.0.0.jar"]
