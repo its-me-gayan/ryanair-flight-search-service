@@ -18,7 +18,7 @@ Note: I have made the final response more readable and generic as follows while 
 
 ![screenshot](scr_cpt.jpg)
 
-And Some insights about unit testing
+And also Some insights about unit and integration testing
 
 ![screenshot](ut_test.jpg)
 
