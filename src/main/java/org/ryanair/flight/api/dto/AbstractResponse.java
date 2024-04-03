@@ -12,10 +12,9 @@ import java.io.Serializable;
  * Time: 3:35 PM
  */
 @Builder
-@Setter
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
 public class AbstractResponse implements Serializable {
     @Serial
     private static final long serialVersionUID = 2405172041950251807L;

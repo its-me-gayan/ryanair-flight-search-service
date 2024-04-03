@@ -77,12 +77,12 @@ public class ResponseGeneratorImpl implements ResponseGenerator {
     }
 
     private AbstractResponse processErrorResponseInternal(HttpStatus httpResponseCode, String errMessage, String errMessageDescription) {
-        AbstractResponse abstractResponse = new AbstractResponse();
-        abstractResponse.setTimeStamp(DateTimeFormatter.ofPattern(Constant.DATE_FORMAT_ISO).format(LocalDateTime.now()));
-        abstractResponse.setResponseCode(httpResponseCode.value());
-        abstractResponse.setMessageDescription(errMessageDescription);
-        abstractResponse.setMessage(errMessage);
-        return abstractResponse;
+        return AbstractResponse.builder()
+                .responseCode(httpResponseCode.value())
+                .timeStamp(DateTimeFormatter.ofPattern(Constant.DATE_FORMAT_ISO).format(LocalDateTime.now()))
+                .messageDescription(errMessageDescription)
+                .message(errMessage)
+                .build();
     }
 
     /**
@@ -95,12 +95,12 @@ public class ResponseGeneratorImpl implements ResponseGenerator {
      * @return AbstractResponse representing the created response.
      */
     private AbstractResponse createAbstractResponse(Object data , HttpStatus httpResponseCode,String message ,String messageDescription){
-        AbstractResponse abstractResponse = new AbstractResponse();
-        abstractResponse.setTimeStamp(DateTimeFormatter.ofPattern(Constant.DATE_FORMAT_ISO).format(LocalDateTime.now()));
-        abstractResponse.setResponseCode(httpResponseCode.value());
-        abstractResponse.setData(data);
-        abstractResponse.setMessageDescription(messageDescription);
-        abstractResponse.setMessage(message);
-        return abstractResponse;
+        return AbstractResponse.builder()
+                .data(data)
+                .responseCode(httpResponseCode.value())
+                .timeStamp(DateTimeFormatter.ofPattern(Constant.DATE_FORMAT_ISO).format(LocalDateTime.now()))
+                .messageDescription(messageDescription)
+                .message(message)
+                .build();
     }
 }
