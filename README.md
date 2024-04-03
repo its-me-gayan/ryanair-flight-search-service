@@ -17,3 +17,8 @@ Application can access using below mentioned url
 Note: I have made the final response more readable and generic as follows while maintaing the requetsted response form (requested final response is under `data` section
 
 ![screenshot](scr_cpt.jpg)
+
+And Some insights about unit testing
+
+![screenshot](ut_test.jpg)
+
