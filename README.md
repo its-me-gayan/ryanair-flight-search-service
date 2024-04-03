@@ -16,9 +16,9 @@ Application can access using below mentioned url
 
 Note: I have made the final response more readable and generic as follows while maintaing the requetsted response form (requested final response is under `data` section
 
-![screenshot](scr_cpt.jpg)
+![screenshot](image_1.jpg)
 
 And also Some insights about unit and integration testing
 
-![screenshot](ut_test.jpg)
+![screenshot](image_2.jpg)
 
