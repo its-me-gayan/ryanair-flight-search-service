@@ -9,7 +9,7 @@ spring:
 backend:
   ryanair:
     api:
-      base-url: https://services-api.ryanair.com
+      base-url: https://services1-api.ryanair.com
       read-timeout: 20000
       connect-timeout: 20000
       write-timeout: 20000
@@ -23,3 +23,39 @@ logging:
     org:
       springframework: INFO
       ryanair: TRACE
+
+# Resilience4J properties
+# #Enable circuit breaker health status
+# Enable actuator health endpoints
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+resilience4j:
+  # Retry
+  retry:
+    retryAspectOrder: 2
+    instances:
+      ryanair-api:
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        maxAttempts: 3
+        waitDuration: 2s
+
+  # Circuitbreaker
+  circuitbreaker:
+    circuitBreakerAspectOrder: 1
+    instances:
+      ryanair-api:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 4
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true

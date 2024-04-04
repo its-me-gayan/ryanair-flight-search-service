@@ -51,7 +51,7 @@ public class ResponseGeneratorImpl implements ResponseGenerator {
 
         return switch (throwable) {
             case BackendInvocationException backendInvocationException ->
-                    processErrorResponseInternal(HttpStatus.BAD_GATEWAY, ResponseMessage.RESPONSE_MESSAGE_FAILED, ResponseMessage.RESPONSE_MESSAGE_FAILED +" : "+throwable.getMessage());
+                    processErrorResponseInternal(backendInvocationException.getStatus(), backendInvocationException.getMessage(), backendInvocationException.getMessageDescription());
             case DataProcessingCommonServiceException dataProcessingCommonServiceException ->
                     processErrorResponseInternal(HttpStatus.BAD_REQUEST, ResponseMessage.RESPONSE_MESSAGE_FAILED, ResponseMessage.RESPONSE_MESSAGE_FAILED +" : "+throwable.getMessage());
             case DataValidationException dataValidationException ->

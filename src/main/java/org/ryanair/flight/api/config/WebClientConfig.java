@@ -5,6 +5,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ryanair.flight.api.config.property.RyanairBackEndPropertyConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -13,8 +14,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.util.concurrent.TimeUnit;
@@ -24,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Configuration
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@Slf4j
 public class WebClientConfig {
 
     private final RyanairBackEndPropertyConfiguration propertyConfiguration;
@@ -57,7 +62,28 @@ public class WebClientConfig {
                 .baseUrl(propertyConfiguration.getBaseUrl())
                 .clientConnector(connector)
                 .exchangeStrategies(strategies)
+                .filter(logRequestDetails())
+                .filter(logResponseDetails())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
+    }
+
+    private ExchangeFilterFunction logRequestDetails() {
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            log.info("Sending [{}] request to URL [{}] with request headers [{}]",
+                    clientRequest.method(), clientRequest.url(), clientRequest.headers());
+            return Mono.just(clientRequest);
+        });
+    }
+
+    private ExchangeFilterFunction logResponseDetails() {
+        return ExchangeFilterFunction.ofResponseProcessor(clientResponse ->
+                clientResponse.bodyToMono(String.class).defaultIfEmpty("").flatMap(responseBody -> {
+                    final ClientResponse orgClientResponse = clientResponse.mutate().body(responseBody).build();
+                    log.info("Received response from API with status [{}]",
+                            clientResponse.statusCode());
+                    return Mono.just(orgClientResponse);
+                })
+        );
     }
 }

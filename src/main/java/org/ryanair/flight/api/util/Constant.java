@@ -11,5 +11,6 @@ public record Constant() {
     public static final String ROUTE_TYPE_DIRECT = "DIRECT";
     public static final String ROUTE_TYPE_INTER_CONNECTED = "INTER_CONNECTED";
     public static final String PROVIDER = "RYANAIR";
+    public static final String DOWNSTREAM_SERVICE_NAME = "ryanair-api";
 
 }

@@ -1,5 +1,11 @@
 package org.ryanair.flight.api.client.impl;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.reactor.circuitbreaker.operator.CircuitBreakerOperator;
+import io.github.resilience4j.reactor.retry.RetryOperator;
+import io.github.resilience4j.retry.RetryRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ryanair.flight.api.client.APIClient;
@@ -8,7 +14,10 @@ import org.ryanair.flight.api.exception.BackendInvocationException;
 import org.ryanair.flight.api.model.RouteAPIResponseModel;
 import org.ryanair.flight.api.model.ScheduleAPIRequestModel;
 import org.ryanair.flight.api.model.ScheduleAPIResponseModel;
+import org.ryanair.flight.api.util.Constant;
+import org.ryanair.flight.api.util.ResponseMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -26,6 +35,9 @@ public class RyanairAPIClient implements APIClient {
 
     private final WebClient webClient;
     private final RyanairBackEndEndpointConfiguration backEndEndpointConfiguration;
+    private final CircuitBreakerRegistry circuitBreakerRegistry;
+    private final RetryRegistry retryRegistry;
+
 
 
     /**
@@ -36,12 +48,24 @@ public class RyanairAPIClient implements APIClient {
      */
     @Override
     public Mono<List<RouteAPIResponseModel>> getRoutes() throws BackendInvocationException {
-
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(Constant.DOWNSTREAM_SERVICE_NAME);
         return webClient.get()
                 .uri(backEndEndpointConfiguration.getRouteEndpointURL())
                 .retrieve()
-                .onStatus(httpStatusCode -> !httpStatusCode.is2xxSuccessful() , clientResponse -> Mono.error(new BackendInvocationException("Invalid Response from backend - "+clientResponse.statusCode())))
+                .onStatus(httpStatusCode ->
+                        !httpStatusCode.is2xxSuccessful() , clientResponse ->
+                        Mono.error(
+                                new BackendInvocationException(ResponseMessage.ERR_SERVICE_UNAVAILABLE, ResponseMessage.ERR_INVALID_RESP_FROM_BACKEND+" - " +clientResponse.statusCode(), HttpStatus.resolve(clientResponse.statusCode().value())
+                                )
+                        )
+                )
                 .bodyToFlux(RouteAPIResponseModel.class)
+                .transformDeferred(RetryOperator.of(retryRegistry.retry(Constant.DOWNSTREAM_SERVICE_NAME))) // ORDER - If above, retry will complete before a failure is recorded by the circuit breaker
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker)) //ORDER - If written below, circuit breaker will record a single failure after the max-retry
+                .doOnError(CallNotPermittedException.class::isInstance, throwable -> {
+                    log.error("Circuit Breaker is in [{}]... Providing fallback response without calling the API", circuitBreaker.getState());
+                    throw new BackendInvocationException(ResponseMessage.ERR_SERVICE_UNAVAILABLE , throwable.getMessage() , HttpStatus.SERVICE_UNAVAILABLE);
+                })
                 .collectList();
     }
 
@@ -55,6 +79,7 @@ public class RyanairAPIClient implements APIClient {
      */
     @Override
     public Mono<ScheduleAPIResponseModel> getSchedules(ScheduleAPIRequestModel scheduleAPIRequestModel) throws BackendInvocationException {
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(Constant.DOWNSTREAM_SERVICE_NAME);
         return webClient.get()
                 .uri(uriBuilder ->
                         uriBuilder
@@ -68,9 +93,19 @@ public class RyanairAPIClient implements APIClient {
 
                 )
                 .retrieve()
-                .onStatus(httpStatusCode -> !httpStatusCode.is2xxSuccessful(), clientResponse -> Mono.error(new BackendInvocationException("Invalid Response from backend - " + clientResponse.statusCode())))
-                .bodyToMono(ScheduleAPIResponseModel.class);
-
+                .onStatus(httpStatusCode ->
+                        !httpStatusCode.is2xxSuccessful() , clientResponse ->
+                        Mono.error(
+                                new BackendInvocationException(ResponseMessage.ERR_SERVICE_UNAVAILABLE, ResponseMessage.ERR_INVALID_RESP_FROM_BACKEND+" - " +clientResponse.statusCode(), HttpStatus.resolve(clientResponse.statusCode().value())
+                                )
+                        )
+                )                .bodyToMono(ScheduleAPIResponseModel.class)
+                .transformDeferred(RetryOperator.of(retryRegistry.retry(Constant.DOWNSTREAM_SERVICE_NAME))) // ORDER - If above, retry will complete before a failure is recorded by the circuit breaker
+                .transformDeferred(CircuitBreakerOperator.of(circuitBreaker)) //ORDER - If written below, circuit breaker will record a single failure after the max-retry
+                .doOnError(CallNotPermittedException.class::isInstance, throwable -> {
+                    log.error("Circuit Breaker is in [{}]... Providing fallback response without calling the API", circuitBreaker.getState());
+                    throw new BackendInvocationException(ResponseMessage.ERR_SERVICE_UNAVAILABLE , throwable.getMessage() , HttpStatus.SERVICE_UNAVAILABLE);
+                });
     }
 
 }
